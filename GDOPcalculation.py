@@ -25,7 +25,7 @@ def calculate_angle(user_position, satellite_position):
 
     # Calculate the cosine of the angle
     cos_theta = dot_product / (user_vector_magnitude * user_to_satellite_magnitude)
-    cos_theta = np.clip(cos_theta, -1.0, 1.0)  # Ensure value is within valid range for arccos (GTP said this)
+    cos_theta = np.clip(cos_theta, -1.0, 1.0)  # Ensure value is within valid range for arccos
     angle_radians = np.arccos(cos_theta)
     angle_degrees = np.degrees(angle_radians)
 
