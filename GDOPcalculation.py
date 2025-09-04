@@ -31,7 +31,7 @@ def calculate_angle(user_position, satellite_position):
 
     return angle_degrees
 
-def calculate_gdop(user_position, satellite_positions):
+def calculate_gdop(user_position, satellite_positions, elevation_mask):
     if len(satellite_positions) < 4:
         raise ValueError("At least 4 satellites are required to calculate GDOP")
 
@@ -41,11 +41,10 @@ def calculate_gdop(user_position, satellite_positions):
 
     #Filter for only visible sats
     for satellite in satellite_positions:
-        angle = calculate_angle(user_position, satellite)
-        if angle <= 75:  # 90 Ref:"75deg COMPARISON OF AVAILABILITY OF GALILEO, GPS AND A COMBINED GALILEO/GPS NAVIGATION SYSTEMS"Satellite is considered visible if the angle is 90 degrees or less
+        angle = calculate_angle(user_position, satellite) # degrees
+        zenith_threshold = 90 - elevation_mask
+        if angle <= zenith_threshold:
             visible_satellites.append(satellite)
-
-    # print("Number of visible satellites:", len(visible_satellites))
 
     # Iterate through all combinations of 4 satellites
     for combination in combinations(visible_satellites, 4):
@@ -61,15 +60,10 @@ def calculate_gdop(user_position, satellite_positions):
             P[i, 3] = 1
 
         try:
-            # Calculate the transpose of P
+            # GDOP Calculation
             P_T = np.transpose(P)
-            # Calculate the inverse of P
-            #P_inv = np.linalg.inv(P)
-            #P_inv_pseudo = np.linalg.pinv(P) #Pseudo inverse for numerical stability (GTP)
-
             D = np.dot(P_T, P)
             T = np.linalg.inv(D)
-            # GDOP is the square root of the sum of the diagonal elements of D
             gdop = np.sqrt(np.trace(T))
 
             if gdop < min_gdop:
@@ -85,22 +79,22 @@ def calculate_gdop(user_position, satellite_positions):
 
     return min_gdop, best_combination, visible_satellites
 
-# New function to calculate GDOP for multiple points
-def calculate_gdop_for_grid(satellite_positions, num_lat, num_lon): #num_lat=180 num_lFon=36
+# Function to calculate GDOP for multiple points
+def calculate_gdop_for_grid(satellite_positions, num_lat, num_lon, elevation_mask):
     gdop_map = np.zeros((num_lat, num_lon))
-    satellite_count_map = np.zeros((num_lat, num_lon)) # To store the number and positions of the satellites
+    satellite_count_map = np.zeros((num_lat, num_lon))
 
     gdop_values = []
 
     for i, lat in enumerate(np.linspace(-90, 90, num_lat)):
         for j, lon in enumerate(np.linspace(-180, 180, num_lon)):
-            # Convert lat, lon to Cartesian coordinates (assuming Earth radius = 6371 km) [changed into meters]
+            # Convert lat, lon to Cartesian coordinates (assuming Earth radius = 6371 km)
             x = 6371000 * np.cos(np.radians(lat)) * np.cos(np.radians(lon))
             y = 6371000 * np.cos(np.radians(lat)) * np.sin(np.radians(lon))
             z = 6371000 * np.sin(np.radians(lat))
 
             user_position = UserPosition(x, y, z)
-            gdop, _, visible_satellites = calculate_gdop(user_position, satellite_positions)
+            gdop, _, visible_satellites = calculate_gdop(user_position, satellite_positions, elevation_mask)
             if gdop is not None:
                 gdop_map[i, j] = gdop
                 satellite_count_map[i,j] = len(visible_satellites)
@@ -109,7 +103,6 @@ def calculate_gdop_for_grid(satellite_positions, num_lat, num_lon): #num_lat=180
                 gdop_map[i, j] = np.nan  # Assign NaN if GDOP cannot be calculated
                 satellite_count_map[i, j] = 0
     gdop_values = np.array(gdop_values)
-
     return gdop_map, satellite_count_map, num_lat, num_lon
 
 # Function to plot the GDOP map
@@ -124,18 +117,6 @@ def plot_gdop_map(gdop_map):
     plt.savefig(f"GDOP_Map.png")
     plt.show()
 
-def plot_satellites_over_latitude(satellite_count_map):
-    # Average the number of satellites over longitude for each latitude
-    avg_satellites_per_lat = np.nanmean(satellite_count_map, axis=1)
-    latitudes = np.linspace(-90, 90, satellite_count_map.shape[0]) #
-    plt.figure(figsize=(10, 6))
-    plt.plot(latitudes, avg_satellites_per_lat, color='blue', marker='o', linestyle='-', linewidth=2, markersize=5)
-    plt.title('Average Number of Visible Satellites Over Latitude')
-    plt.xlabel('Latitude (degrees)')
-    plt.ylabel('Number of Visible Satellites')
-    plt.grid(True)
-    plt.savefig(f"SatelliteNumber_Over_Latitude.png")
-    plt.show()
 def calculate_elevation(user_position, sat_position):
     # Vector from user to satellite
     dx = sat_position['x'] - user_position.user_x

@@ -1,10 +1,6 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from PIL import Image
-from matplotlib import cm
-from matplotlib.colors import Normalize
 
 def plot_earth_and_satellites(user_position, best_combination, satellite_position, visible_satellites):
     fig = plt.figure(figsize=(12, 8))
@@ -59,7 +55,7 @@ def plot_earth_and_satellites(user_position, best_combination, satellite_positio
             sat_z_km - user_z_km,
             color='red', arrow_length_ratio=0.05, lw=1.5
         )
-    # Plot the other satellites
+
     # Plot all other visible satellites in black
     for sat in visible_satellites:
         if sat not in best_combination:  # Ensure it's not already plotted
@@ -79,9 +75,6 @@ def plot_earth_and_satellites(user_position, best_combination, satellite_positio
     ax.set_xlim([-20000, 20000])
     ax.set_ylim([-20000, 20000])
     ax.set_zlim([-20000, 20000])
-
-    # Set the view to look along the Y-Z plane
-    #ax.view_init(elev=90, azim=0)
 
     # Add labels
     ax.set_xlabel('X')
@@ -128,10 +121,6 @@ def plot_3d_distribution(gdop_map, num_lat, num_lon):
     ax = fig.add_subplot(111, projection='3d')
 
     ax.scatter(X, Y, Z, color='blue', marker='o', s=10)
-    # sc = ax.scatter(X, Y, Z, c=colors, cmap='jet', marker='o', s=50)
-    # Add color bar to indicate GDOP values
-    # cbar = plt.colorbar(sc)
-    # cbar.set_label('GDOP Value')
 
     # Set labels and title
     ax.set_title('3D Distribution of User Points and GDOP Values')
